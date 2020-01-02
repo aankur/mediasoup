@@ -85,6 +85,15 @@ beforeAll(async () =>
 			});
 	}
 
+	// Wait for the SCTP association to be open.
+	await Promise.race(
+		[
+			new Promise((resolve) => sctpSocket.on('connect', resolve)),
+			new Promise((resolve, reject) => (
+				setTimeout(() => reject(new Error('SCTP connection timeout')), 3000)
+			))
+		]);
+
 	// Create an explicit SCTP outgoing stream with id 123 (id 0 is already used
 	// by the implicit SCTP outgoing stream built-in the SCTP socket).
 	sctpSendStreamId = 123;
@@ -178,7 +187,7 @@ test('ordered DataProducer delivers all SCTP messages to the DataConsumer', asyn
 
 	await expect(dataProducer.getStats())
 		.resolves
-		.toStrictEqual(
+		.toMatchObject(
 			[
 				{
 					type             : 'data-producer',
@@ -191,7 +200,7 @@ test('ordered DataProducer delivers all SCTP messages to the DataConsumer', asyn
 
 	await expect(dataConsumer.getStats())
 		.resolves
-		.toStrictEqual(
+		.toMatchObject(
 			[
 				{
 					type         : 'data-consumer',
@@ -201,4 +210,4 @@ test('ordered DataProducer delivers all SCTP messages to the DataConsumer', asyn
 					bytesSent    : recvMessageBytes
 				}
 			]);
-}, 8000);
+}, 10000);
