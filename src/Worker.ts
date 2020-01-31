@@ -2,11 +2,11 @@ import * as process from 'process';
 import * as path from 'path';
 import { spawn, ChildProcess } from 'child_process';
 import uuidv4 from 'uuid/v4';
-import Logger from './Logger';
-import EnhancedEventEmitter from './EnhancedEventEmitter';
+import { Logger } from './Logger';
+import { EnhancedEventEmitter } from './EnhancedEventEmitter';
 import * as ortc from './ortc';
-import Channel from './Channel';
-import Router, { RouterOptions } from './Router';
+import { Channel } from './Channel';
+import { Router, RouterOptions } from './Router';
 
 export type WorkerLogLevel = 'debug' | 'warn' | 'error' | 'none';
 
@@ -158,14 +158,12 @@ const workerBin = process.env.MEDIASOUP_WORKER_BIN
 		: path.join(__dirname, '..', 'worker', 'out', 'Release', 'mediasoup-worker');
 
 const logger = new Logger('Worker');
+const workerLogger = new Logger('Worker');
 
-export default class Worker extends EnhancedEventEmitter
+export class Worker extends EnhancedEventEmitter
 {
 	// mediasoup-worker child process.
 	private _child?: ChildProcess;
-
-	// Logger for stdout and stderr logs from the worker process.
-	private readonly _workerLogger: Logger;
 
 	// Worker process PID.
 	private readonly _pid: number;
@@ -265,8 +263,6 @@ export default class Worker extends EnhancedEventEmitter
 				stdio : [ 'ignore', 'pipe', 'pipe', 'pipe', 'pipe' ]
 			});
 
-		this._workerLogger = new Logger(`worker[pid:${this._child.pid}]`);
-
 		this._pid = this._child.pid;
 
 		this._channel = new Channel(
@@ -361,7 +357,7 @@ export default class Worker extends EnhancedEventEmitter
 			for (const line of buffer.toString('utf8').split('\n'))
 			{
 				if (line)
-					this._workerLogger.debug(`(stdout) ${line}`);
+					workerLogger.debug(`(stdout) ${line}`);
 			}
 		});
 
@@ -371,7 +367,7 @@ export default class Worker extends EnhancedEventEmitter
 			for (const line of buffer.toString('utf8').split('\n'))
 			{
 				if (line)
-					this._workerLogger.error(`(stderr) ${line}`);
+					workerLogger.error(`(stderr) ${line}`);
 			}
 		});
 	}

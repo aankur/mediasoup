@@ -1,13 +1,13 @@
 import uuidv4 from 'uuid/v4';
-import Logger from './Logger';
-import EnhancedEventEmitter from './EnhancedEventEmitter';
+import { Logger } from './Logger';
+import { EnhancedEventEmitter } from './EnhancedEventEmitter';
 import * as utils from './utils';
 import * as ortc from './ortc';
-import Channel from './Channel';
-import Producer, { ProducerOptions } from './Producer';
-import Consumer, { ConsumerOptions } from './Consumer';
-import DataProducer, { DataProducerOptions } from './DataProducer';
-import DataConsumer, { DataConsumerOptions } from './DataConsumer';
+import { Channel } from './Channel';
+import { Producer, ProducerOptions } from './Producer';
+import { Consumer, ConsumerOptions } from './Consumer';
+import { DataProducer, DataProducerOptions } from './DataProducer';
+import { DataConsumer, DataConsumerOptions } from './DataConsumer';
 import { RtpCapabilities } from './RtpParameters';
 import { SctpStreamParameters } from './SctpParameters';
 
@@ -74,7 +74,7 @@ export type SctpState = 'new' | 'connecting' | 'connected' | 'failed' | 'closed'
 
 const logger = new Logger('Transport');
 
-export default class Transport extends EnhancedEventEmitter
+export class Transport extends EnhancedEventEmitter
 {
 	// Internal data.
 	// - .routerId
@@ -157,7 +157,7 @@ export default class Transport extends EnhancedEventEmitter
 		}
 	)
 	{
-		super(logger);
+		super();
 
 		logger.debug('constructor()');
 
@@ -397,14 +397,21 @@ export default class Transport extends EnhancedEventEmitter
 			throw new TypeError(`a Producer with same id "${id}" already exists`);
 		else if (![ 'audio', 'video' ].includes(kind))
 			throw new TypeError(`invalid kind "${kind}"`);
-		else if (typeof rtpParameters !== 'object')
-			throw new TypeError('missing rtpParameters');
 		else if (appData && typeof appData !== 'object')
 			throw new TypeError('if given, appData must be an object');
 
-		// If missing encodings, add one.
-		if (!rtpParameters.encodings || !Array.isArray(rtpParameters.encodings))
+		// This may throw.
+		ortc.validateRtpParameters(rtpParameters);
+
+		// If missing or empty encodings, add one.
+		if (
+			!rtpParameters.encodings ||
+			!Array.isArray(rtpParameters.encodings) ||
+			rtpParameters.encodings.length === 0
+		)
+		{
 			rtpParameters.encodings = [ {} ];
+		}
 
 		// Don't do this in PipeTransports since there we must keep CNAME value in
 		// each Producer.
@@ -495,10 +502,11 @@ export default class Transport extends EnhancedEventEmitter
 
 		if (!producerId || typeof producerId !== 'string')
 			throw new TypeError('missing producerId');
-		else if (typeof rtpCapabilities !== 'object')
-			throw new TypeError('missing rtpCapabilities');
 		else if (appData && typeof appData !== 'object')
 			throw new TypeError('if given, appData must be an object');
+
+		// This may throw.
+		ortc.validateRtpCapabilities(rtpCapabilities);
 
 		const producer = this._getProducerById(producerId);
 
@@ -564,10 +572,11 @@ export default class Transport extends EnhancedEventEmitter
 
 		if (id && this._dataProducers.has(id))
 			throw new TypeError(`a DataProducer with same id "${id}" already exists`);
-		else if (typeof sctpStreamParameters !== 'object')
-			throw new TypeError('missing sctpStreamParameters');
 		else if (appData && typeof appData !== 'object')
 			throw new TypeError('if given, appData must be an object');
+
+		// This may throw.
+		ortc.validateSctpStreamParameters(sctpStreamParameters);
 
 		const internal = { ...this._internal, dataProducerId: id || uuidv4() };
 		const reqData = { sctpStreamParameters, label, protocol };
