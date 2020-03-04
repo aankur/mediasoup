@@ -21,7 +21,6 @@ namespace Utils
 	class IP
 	{
 	public:
-		static int GetFamily(const char* ip, size_t ipLen);
 		static int GetFamily(const std::string& ip);
 		static void GetAddressInfo(const struct sockaddr* addr, int& family, std::string& ip, uint16_t& port);
 		static bool CompareAddresses(const struct sockaddr* addr1, const struct sockaddr* addr2);
@@ -30,11 +29,6 @@ namespace Utils
 	};
 
 	/* Inline static methods. */
-
-	inline int IP::GetFamily(const std::string& ip)
-	{
-		return GetFamily(ip.c_str(), ip.size());
-	}
 
 	inline bool IP::CompareAddresses(const struct sockaddr* addr1, const struct sockaddr* addr2)
 	{
@@ -295,6 +289,10 @@ namespace Utils
 	{
 	public:
 		static void ToLowerCase(std::string& str);
+		static std::string Base64Encode(const uint8_t* data, size_t len);
+		static std::string Base64Encode(const std::string& str);
+		static uint8_t* Base64Decode(const uint8_t* data, size_t len, size_t& outLen);
+		static uint8_t* Base64Decode(const std::string& str, size_t& outLen);
 	};
 
 	inline void String::ToLowerCase(std::string& str)

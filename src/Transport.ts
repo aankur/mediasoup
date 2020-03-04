@@ -1,4 +1,4 @@
-import uuidv4 from 'uuid/v4';
+import { v4 as uuidv4 } from 'uuid';
 import { Logger } from './Logger';
 import { EnhancedEventEmitter } from './EnhancedEventEmitter';
 import * as utils from './utils';
@@ -387,7 +387,7 @@ export class Transport extends EnhancedEventEmitter
 			kind,
 			rtpParameters,
 			paused = false,
-			keyFrameWaitTime,
+			keyFrameRequestDelay,
 			appData = {}
 		}: ProducerOptions
 	): Promise<Producer>
@@ -447,7 +447,7 @@ export class Transport extends EnhancedEventEmitter
 			kind, rtpParameters, routerRtpCapabilities, rtpMapping);
 
 		const internal = { ...this._internal, producerId: id || uuidv4() };
-		const reqData = { kind, rtpParameters, rtpMapping, keyFrameWaitTime, paused };
+		const reqData = { kind, rtpParameters, rtpMapping, keyFrameRequestDelay, paused };
 
 		const status =
 			await this._channel.request('transport.produce', internal, reqData);

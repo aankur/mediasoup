@@ -3,7 +3,7 @@ import { EnhancedEventEmitter } from './EnhancedEventEmitter';
 import { Channel } from './Channel';
 import { MediaKind, RtpParameters } from './RtpParameters';
 
-export interface ProducerOptions
+export type ProducerOptions =
 {
 	/**
 	 * Producer id (just for Router.pipeToRouter() method).
@@ -27,10 +27,9 @@ export interface ProducerOptions
 
 	/**
 	 * Just for video. Time (in ms) before asking the sender for a new key frame
-	 * after having asked a previous one. Default 1000. Minimum valid value is
-	 * 500.
+	 * after having asked a previous one. Default 0.
 	 */
-	keyFrameWaitTime?: number;
+	keyFrameRequestDelay?: number;
 
 	/**
 	 * Custom application data.
@@ -46,7 +45,7 @@ export type ProducerTraceEventType = 'rtp' | 'keyframe' | 'nack' | 'pli' | 'fir'
 /**
  * 'trace' event data.
  */
-export interface ProducerTraceEventData
+export type ProducerTraceEventData =
 {
 	/**
 	 * Trace type.
@@ -69,7 +68,7 @@ export interface ProducerTraceEventData
 	info: any;
 }
 
-export interface ProducerScore
+export type ProducerScore =
 {
 	/**
 	 * SSRC of the RTP stream.
@@ -87,7 +86,7 @@ export interface ProducerScore
 	score: number;
 }
 
-export interface ProducerVideoOrientation
+export type ProducerVideoOrientation =
 {
 	/**
 	 * Whether the source is a video camera.
@@ -105,7 +104,7 @@ export interface ProducerVideoOrientation
 	rotation: number;
 }
 
-export interface ProducerStat
+export type ProducerStat =
 {
 	// Common to all RtpStreams.
 	type: string;

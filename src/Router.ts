@@ -1,4 +1,4 @@
-import uuidv4 from 'uuid/v4';
+import { v4 as uuidv4 } from 'uuid';
 import { AwaitQueue } from 'awaitqueue';
 import { Logger } from './Logger';
 import { EnhancedEventEmitter } from './EnhancedEventEmitter';
@@ -7,7 +7,7 @@ import { InvalidStateError } from './errors';
 import { Channel } from './Channel';
 import { Transport, TransportListenIp } from './Transport';
 import { WebRtcTransport, WebRtcTransportOptions } from './WebRtcTransport';
-import { PlainRtpTransport, PlainRtpTransportOptions } from './PlainRtpTransport';
+import { PlainTransport, PlainTransportOptions } from './PlainTransport';
 import { PipeTransport, PipeTransportOptions } from './PipeTransport';
 import { Producer } from './Producer';
 import { Consumer } from './Consumer';
@@ -18,7 +18,7 @@ import { AudioLevelObserver, AudioLevelObserverOptions } from './AudioLevelObser
 import { RtpCapabilities, RtpCodecCapability } from './RtpParameters';
 import { NumSctpStreams } from './SctpParameters';
 
-export interface RouterOptions
+export type RouterOptions =
 {
 	/**
 	 * Router media codecs.
@@ -31,7 +31,7 @@ export interface RouterOptions
 	appData?: any;
 }
 
-export interface PipeToRouterOptions
+export type PipeToRouterOptions =
 {
 	/**
 	 * The id of the Producer to consume.
@@ -62,9 +62,19 @@ export interface PipeToRouterOptions
 	 * SCTP streams number.
 	 */
 	numSctpStreams?: NumSctpStreams;
+
+	/**
+	 * Enable RTX and NACK for RTP retransmission.
+	 */
+	enableRtx?: boolean;
+
+	/**
+	 * Enable SRTP.
+	 */
+	enableSrtp?: boolean;
 }
 
-export interface PipeToRouterResult
+export type PipeToRouterResult =
 {
 	/**
 	 * The Consumer created in the current Router.
@@ -406,9 +416,9 @@ export class Router extends EnhancedEventEmitter
 	}
 
 	/**
-	 * Create a PlainRtpTransport.
+	 * Create a PlainTransport.
 	 */
-	async createPlainRtpTransport(
+	async createPlainTransport(
 		{
 			listenIp,
 			rtcpMux = true,
@@ -417,11 +427,13 @@ export class Router extends EnhancedEventEmitter
 			enableSctp = false,
 			numSctpStreams = { OS: 1024, MIS: 1024 },
 			maxSctpMessageSize = 262144,
+			enableSrtp = false,
+			srtpCryptoSuite = 'AES_CM_128_HMAC_SHA1_80',
 			appData = {}
-		}: PlainRtpTransportOptions
-	): Promise<PlainRtpTransport>
+		}: PlainTransportOptions
+	): Promise<PlainTransport>
 	{
-		logger.debug('createPlainRtpTransport()');
+		logger.debug('createPlainTransport()');
 
 		if (!listenIp)
 			throw new TypeError('missing listenIp');
@@ -454,13 +466,15 @@ export class Router extends EnhancedEventEmitter
 			enableSctp,
 			numSctpStreams,
 			maxSctpMessageSize,
-			isDataChannel : false
+			isDataChannel : false,
+			enableSrtp,
+			srtpCryptoSuite
 		};
 
 		const data =
-			await this._channel.request('router.createPlainRtpTransport', internal, reqData);
+			await this._channel.request('router.createPlainTransport', internal, reqData);
 
-		const transport = new PlainRtpTransport(
+		const transport = new PlainTransport(
 			{
 				internal,
 				data,
@@ -493,6 +507,19 @@ export class Router extends EnhancedEventEmitter
 	}
 
 	/**
+	 * DEPRECATED: Use createPlainTransport().
+	 */
+	async createPlainRtpTransport(
+		options: PlainTransportOptions
+	): Promise<PlainTransport>
+	{
+		logger.warn(
+			'createPlainRtpTransport() is DEPRECATED, use createPlainTransport()');
+
+		return this.createPlainTransport(options);
+	}
+
+	/**
 	 * Create a PipeTransport.
 	 */
 	async createPipeTransport(
@@ -501,6 +528,8 @@ export class Router extends EnhancedEventEmitter
 			enableSctp = false,
 			numSctpStreams = { OS: 1024, MIS: 1024 },
 			maxSctpMessageSize = 1073741823,
+			enableRtx = false,
+			enableSrtp = false,
 			appData = {}
 		}: PipeTransportOptions
 	): Promise<PipeTransport>
@@ -535,7 +564,9 @@ export class Router extends EnhancedEventEmitter
 			enableSctp,
 			numSctpStreams,
 			maxSctpMessageSize,
-			isDataChannel : false
+			isDataChannel : false,
+			enableRtx,
+			enableSrtp
 		};
 
 		const data =
@@ -583,7 +614,9 @@ export class Router extends EnhancedEventEmitter
 			router,
 			listenIp = '127.0.0.1',
 			enableSctp = true,
-			numSctpStreams = { OS: 1024, MIS: 1024 }
+			numSctpStreams = { OS: 1024, MIS: 1024 },
+			enableRtx = false,
+			enableSrtp = false
 		}: PipeToRouterOptions
 	): Promise<PipeToRouterResult>
 	{
@@ -639,8 +672,11 @@ export class Router extends EnhancedEventEmitter
 				{
 					pipeTransportPair = await Promise.all(
 						[
-							this.createPipeTransport({ listenIp, enableSctp, numSctpStreams }),
-							router.createPipeTransport({ listenIp, enableSctp, numSctpStreams })
+							this.createPipeTransport(
+								{ listenIp, enableSctp, numSctpStreams, enableRtx, enableSrtp }),
+
+							router.createPipeTransport(
+								{ listenIp, enableSctp, numSctpStreams, enableRtx, enableSrtp })
 						]);
 
 					localPipeTransport = pipeTransportPair[0];
@@ -650,13 +686,16 @@ export class Router extends EnhancedEventEmitter
 						[
 							localPipeTransport.connect(
 								{
-									ip   : remotePipeTransport.tuple.localIp,
-									port : remotePipeTransport.tuple.localPort
+									ip             : remotePipeTransport.tuple.localIp,
+									port           : remotePipeTransport.tuple.localPort,
+									srtpParameters : remotePipeTransport.srtpParameters
 								}),
+
 							remotePipeTransport.connect(
 								{
-									ip   : localPipeTransport.tuple.localIp,
-									port : localPipeTransport.tuple.localPort
+									ip             : localPipeTransport.tuple.localIp,
+									port           : localPipeTransport.tuple.localPort,
+									srtpParameters : localPipeTransport.srtpParameters
 								})
 						]);
 

@@ -52,7 +52,7 @@ beforeAll(async () =>
 		{
 			listenIps : [ '127.0.0.1' ]
 		});
-	transport2 = await router.createPlainRtpTransport(
+	transport2 = await router.createPlainTransport(
 		{
 			listenIp : '127.0.0.1'
 		});
@@ -199,8 +199,7 @@ test('transport2.produce() succeeds', async () =>
 					cname : 'video-1'
 				}
 			},
-			keyFrameWaitTime : 500,
-			appData          : { foo: 1, bar: '2' }
+			appData : { foo: 1, bar: '2' }
 		});
 
 	expect(onObserverNewProducer).toHaveBeenCalledTimes(1);
@@ -335,33 +334,6 @@ test('transport1.produce() with wrong arguments rejects with TypeError', async (
 					cname : 'video-1'
 				}
 			}
-		}))
-		.rejects
-		.toThrow(TypeError);
-
-	// Wrong keyFrameWaitTime (less than 500).
-	await expect(transport1.produce(
-		{
-			kind          : 'video',
-			rtpParameters :
-			{
-				codecs :
-				[
-					{
-						mimeType    : 'video/h264',
-						payloadType : 112,
-						clockRate   : 90000,
-						parameters  :
-						{
-							'packetization-mode' : 1,
-							'profile-level-id'   : '4d0032'
-						}
-					}
-				],
-				encodings : [ { ssrc: 6666 } ],
-				rtcp      : { cname: 'qwerty' }
-			},
-			keyFrameWaitTime : 499
 		}))
 		.rejects
 		.toThrow(TypeError);
@@ -580,7 +552,7 @@ test('producer.dump() succeeds', async () =>
 	expect(data.rtpParameters.codecs[0].mimeType).toBe('video/H264');
 	expect(data.rtpParameters.codecs[0].payloadType).toBe(112);
 	expect(data.rtpParameters.codecs[0].clockRate).toBe(90000);
-	expect(data.rtpParameters.codecs[0].channels).toBe(undefined);
+	expect(data.rtpParameters.codecs[0].channels).toBeUndefined();
 	expect(data.rtpParameters.codecs[0].parameters)
 		.toEqual(
 			{
@@ -597,7 +569,7 @@ test('producer.dump() succeeds', async () =>
 	expect(data.rtpParameters.codecs[1].mimeType).toBe('video/rtx');
 	expect(data.rtpParameters.codecs[1].payloadType).toBe(113);
 	expect(data.rtpParameters.codecs[1].clockRate).toBe(90000);
-	expect(data.rtpParameters.codecs[1].channels).toBe(undefined);
+	expect(data.rtpParameters.codecs[1].channels).toBeUndefined();
 	expect(data.rtpParameters.codecs[1].parameters).toEqual({ apt: 112 });
 	expect(data.rtpParameters.codecs[1].rtcpFeedback).toEqual([]);
 	expect(data.rtpParameters.headerExtensions).toBeType('array');

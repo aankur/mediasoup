@@ -9,8 +9,9 @@ import {
 } from './Transport';
 import { Consumer, ConsumerOptions } from './Consumer';
 import { SctpParameters, NumSctpStreams } from './SctpParameters';
+import { SrtpParameters, SrtpCryptoSuite } from './SrtpParameters';
 
-export interface PlainRtpTransportOptions
+export type PlainTransportOptions =
 {
 	/**
 	 * Listening IP address.
@@ -53,12 +54,29 @@ export interface PlainRtpTransportOptions
 	maxSctpMessageSize?: number;
 
 	/**
+	 * Enable SRTP. For this to work, connect() must be called
+	 * with remote SRTP parameters. Default false.
+	 */
+	enableSrtp?: boolean;
+
+	/**
+	 * The SRTP crypto suite to be used if enableSrtp is set. Default
+	 * 'AES_CM_128_HMAC_SHA1_80'.
+	 */
+	srtpCryptoSuite?: SrtpCryptoSuite;
+
+	/**
 	 * Custom application data.
 	 */
 	appData?: any;
 }
 
-export interface PlainRtpTransportStat
+/**
+ * DEPRECATED: Use PlainTransportOptions.
+ */
+export type PlainRtpTransportOptions = PlainTransportOptions;
+
+export type PlainTransportStat =
 {
 	// Common to all Transports.
 	type: string;
@@ -85,7 +103,7 @@ export interface PlainRtpTransportStat
 	availableIncomingBitrate?: number;
 	maxIncomingBitrate?: number;
 
-	// PlainRtpTransport specific.
+	// PlainTransport specific.
 	rtcpMux: boolean;
 	comedia: boolean;
 	multiSource: boolean;
@@ -93,11 +111,16 @@ export interface PlainRtpTransportStat
 	rtcpTuple?: TransportTuple;
 }
 
-const logger = new Logger('PlainRtpTransport');
+/**
+ * DEPRECATED: Use PlainTransportOptions.
+ */
+export type PlainRtpTransportStat = PlainTransportStat;
 
-export class PlainRtpTransport extends Transport
+const logger = new Logger('PlainTransport');
+
+export class PlainTransport extends Transport
 {
-	// PlainRtpTransport data.
+	// PlainTransport data.
 	// - .rtcpMux
 	// - .comedia
 	// - .multiSource
@@ -119,9 +142,14 @@ export class PlainRtpTransport extends Transport
 	//   - .MIS
 	//   - .maxMessageSize
 	// - .sctpState
+	// - .srtpParameters
+	//   - .cryptoSuite
+	//   - .keyBase64
 
 	/**
 	 * @private
+	 * @emits tuple - (tuple: TransportTuple)
+	 * @emits rtcpTuple - (rtcpTuple: TransportTuple)
 	 * @emits sctpstatechange - (sctpState: SctpState)
 	 * @emits trace - (trace: TransportTraceEventData)
 	 */
@@ -138,7 +166,8 @@ export class PlainRtpTransport extends Transport
 			tuple          : data.tuple,
 			rtcpTuple      : data.rtcpTuple,
 			sctpParameters : data.sctpParameters,
-			sctpState      : data.sctpState
+			sctpState      : data.sctpState,
+			srtpParameters : data.srtpParameters
 		};
 
 		this._handleWorkerNotifications();
@@ -155,7 +184,7 @@ export class PlainRtpTransport extends Transport
 	/**
 	 * Transport RTCP tuple.
 	 */
-	get rtcpTuple(): TransportTuple
+	get rtcpTuple(): TransportTuple | undefined
 	{
 		return this._data.rtcpTuple;
 	}
@@ -177,6 +206,14 @@ export class PlainRtpTransport extends Transport
 	}
 
 	/**
+	 * SRTP parameters.
+	 */
+	get srtpParameters(): SrtpParameters | undefined
+	{
+		return this._data.srtpParameters;
+	}
+
+	/**
 	 * Observer.
 	 *
 	 * @override
@@ -185,6 +222,8 @@ export class PlainRtpTransport extends Transport
 	 * @emits newconsumer - (producer: Producer)
 	 * @emits newdataproducer - (dataProducer: DataProducer)
 	 * @emits newdataconsumer - (dataProducer: DataProducer)
+	 * @emits tuple - (tuple: TransportTuple)
+	 * @emits rtcpTuple - (rtcpTuple: TransportTuple)
 	 * @emits sctpstatechange - (sctpState: SctpState)
 	 * @emits trace - (trace: TransportTraceEventData)
 	 */
@@ -194,7 +233,7 @@ export class PlainRtpTransport extends Transport
 	}
 
 	/**
-	 * Close the PlainRtpTransport.
+	 * Close the PlainTransport.
 	 *
 	 * @override
 	 */
@@ -227,11 +266,11 @@ export class PlainRtpTransport extends Transport
 	}
 
 	/**
-	 * Get PlainRtpTransport stats.
+	 * Get PlainTransport stats.
 	 *
 	 * @override
 	 */
-	async getStats(): Promise<PlainRtpTransportStat[]>
+	async getStats(): Promise<PlainTransportStat[]>
 	{
 		logger.debug('getStats()');
 
@@ -239,7 +278,7 @@ export class PlainRtpTransport extends Transport
 	}
 
 	/**
-	 * Provide the PlainRtpTransport remote parameters.
+	 * Provide the PlainTransport remote parameters.
 	 *
 	 * @override
 	 */
@@ -247,25 +286,32 @@ export class PlainRtpTransport extends Transport
 		{
 			ip,
 			port,
-			rtcpPort
+			rtcpPort,
+			srtpParameters
 		}:
 		{
-			ip: string;
-			port: number;
+			ip?: string;
+			port?: number;
 			rtcpPort?: number;
+			srtpParameters?: SrtpParameters;
 		}
 	): Promise<void>
 	{
 		logger.debug('connect()');
 
-		const reqData = { ip, port, rtcpPort };
+		const reqData = { ip, port, rtcpPort, srtpParameters };
 
 		const data =
 			await this._channel.request('transport.connect', this._internal, reqData);
 
 		// Update data.
-		this._data.tuple = data.tuple;
-		this._data.rtcpTuple = data.rtcpTuple;
+		if (data.tuple)
+			this._data.tuple = data.tuple;
+
+		if (data.rtcpTuple)
+			this._data.rtcpTuple = data.rtcpTuple;
+
+		this._data.srtpParameters = data.srtpParameters;
 	}
 
 	/**
@@ -287,6 +333,34 @@ export class PlainRtpTransport extends Transport
 		{
 			switch (event)
 			{
+				case 'tuple':
+				{
+					const tuple = data.tuple as TransportTuple;
+
+					this._data.tuple = tuple;
+
+					this.safeEmit('tuple', tuple);
+
+					// Emit observer event.
+					this._observer.safeEmit('tuple', tuple);
+
+					break;
+				}
+
+				case 'rtcpTuple':
+				{
+					const rtcpTuple = data.rtcpTuple as TransportTuple;
+
+					this._data.rtcpTuple = rtcpTuple;
+
+					this.safeEmit('rtcpTuple', rtcpTuple);
+
+					// Emit observer event.
+					this._observer.safeEmit('rtcpTuple', rtcpTuple);
+
+					break;
+				}
+
 				case 'sctpstatechange':
 				{
 					const sctpState = data.sctpState as SctpState;
@@ -319,5 +393,16 @@ export class PlainRtpTransport extends Transport
 				}
 			}
 		});
+	}
+}
+
+/**
+ * DEPRECATED: Use PlainTransport.
+ */
+export class PlainRtpTransport extends PlainTransport
+{
+	constructor(params: any)
+	{
+		super(params);
 	}
 }

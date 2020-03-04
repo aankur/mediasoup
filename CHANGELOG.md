@@ -1,6 +1,38 @@
 # Changelog
 
 
+### 3.5.0
+
+* `PipeTransport`: Add support for SRTP and RTP retransmission (RTX + NACK). Useful when connecting two mediasoup servers running in different hosts via pipe transports.
+* `PlainTransport`: Add support for SRTP.
+* Rename `PlainRtpTransport` to `PlainTransport` everywhere (classes, methods, TypeScript types, etc). Keep previous names and mark them as DEPRECATED.
+* Fix vulnarability in IPv6 parser.
+
+
+### 3.4.13
+
+* Update `uuid` dep to 7.0.X (new API).
+* Fix crash due wrong array index in `PipeConsumer::FillJwon()`.
+  - Fixes #364
+
+
+### 3.4.12
+
+* TypeScript: generate `es2020` instead of `es6`.
+* Update `usrsctp` library.
+  - Fixes #362 (thanks @chvarlam for reporting it).
+
+
+### 3.4.11
+
+* `IceServer.cpp`: Reject received STUN Binding request with 487 if remote peer indicates ICE-CONTROLLED into it.
+
+
+### 3.4.10
+
+* `ProducerOptions`: Rename `keyFrameWaitTime` option to `keyFrameRequestDelay` and make it work as expected.
+
+
 ### 3.4.9
 
 * Add `Utils::Json::IsPositiveInteger()` to not rely on `is_number_unsigned()` of json lib, which is unreliable due to its design.
