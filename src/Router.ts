@@ -102,12 +102,16 @@ const logger = new Logger('Router');
 export class Router extends EnhancedEventEmitter
 {
 	// Internal data.
-	// - .routerId
-	private readonly _internal: any;
+	private readonly _internal:
+	{
+		routerId: string;
+	};
 
 	// Router data.
-	// - .rtpCapabilities
-	private readonly _data: any;
+	private readonly _data:
+	{
+		rtpCapabilities: RtpCapabilities;
+	}
 
 	// Channel instance.
 	private readonly _channel: Channel;
@@ -423,7 +427,6 @@ export class Router extends EnhancedEventEmitter
 			listenIp,
 			rtcpMux = true,
 			comedia = false,
-			multiSource = false,
 			enableSctp = false,
 			numSctpStreams = { OS: 1024, MIS: 1024 },
 			maxSctpMessageSize = 262144,
@@ -462,7 +465,6 @@ export class Router extends EnhancedEventEmitter
 			listenIp,
 			rtcpMux,
 			comedia,
-			multiSource,
 			enableSctp,
 			numSctpStreams,
 			maxSctpMessageSize,

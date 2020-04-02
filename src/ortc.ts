@@ -111,9 +111,16 @@ export function validateRtpCodecCapability(codec: RtpCodecCapability): void
 	if (typeof codec.clockRate !== 'number')
 		throw new TypeError('missing codec.clockRate');
 
-	// channels is optional. If unset, set it to 1.
-	if (typeof codec.channels !== 'number')
-		codec.channels = 1;
+	// channels is optional. If unset, set it to 1 (just if audio).
+	if (codec.kind === 'audio')
+	{
+		if (typeof codec.channels !== 'number')
+			codec.channels = 1;
+	}
+	else
+	{
+		delete codec.channels;
+	}
 
 	// parameters is optional. If unset, set it to an empty object.
 	if (!codec.parameters || typeof codec.parameters !== 'object')
@@ -294,9 +301,18 @@ export function validateRtpCodecParameters(codec: RtpCodecParameters): void
 	if (typeof codec.clockRate !== 'number')
 		throw new TypeError('missing codec.clockRate');
 
-	// channels is optional. If unset, set it to 1.
-	if (typeof codec.channels !== 'number')
-		codec.channels = 1;
+	const kind = mimeTypeMatch[1].toLowerCase() as MediaKind;
+
+	// channels is optional. If unset, set it to 1 (just if audio).
+	if (kind === 'audio')
+	{
+		if (typeof codec.channels !== 'number')
+			codec.channels = 1;
+	}
+	else
+	{
+		delete codec.channels;
+	}
 
 	// parameters is optional. If unset, set it to an empty object.
 	if (!codec.parameters || typeof codec.parameters !== 'object')
@@ -564,12 +580,13 @@ export function generateRouterRtpCapabilities(
 	if (!Array.isArray(mediaCodecs))
 		throw new TypeError('mediaCodecs must be an Array');
 
+	const clonedSupportedRtpCapabilities =
+		utils.clone(supportedRtpCapabilities) as RtpCapabilities;
 	const dynamicPayloadTypes = utils.clone(DynamicPayloadTypes) as number[];
-	const supportedCodecs = supportedRtpCapabilities.codecs;
 	const caps: RtpCapabilities =
 	{
 		codecs           : [],
-		headerExtensions : supportedRtpCapabilities.headerExtensions
+		headerExtensions : clonedSupportedRtpCapabilities.headerExtensions
 	};
 
 	for (const mediaCodec of mediaCodecs)
@@ -577,7 +594,8 @@ export function generateRouterRtpCapabilities(
 		// This may throw.
 		validateRtpCodecCapability(mediaCodec);
 
-		const matchedSupportedCodec = supportedCodecs
+		const matchedSupportedCodec = clonedSupportedRtpCapabilities
+			.codecs
 			.find((supportedCodec) => (
 				matchCodecs(mediaCodec, supportedCodec, { strict: false }))
 			);
@@ -644,7 +662,6 @@ export function generateRouterRtpCapabilities(
 				mimeType             : `${codec.kind}/rtx`,
 				preferredPayloadType : pt,
 				clockRate            : codec.clockRate,
-				channels             : 1,
 				parameters           :
 				{
 					apt : codec.preferredPayloadType
@@ -822,7 +839,6 @@ export function getConsumableRtpParameters(
 				mimeType     : consumableCapRtxCodec.mimeType,
 				payloadType  : consumableCapRtxCodec.preferredPayloadType,
 				clockRate    : consumableCapRtxCodec.clockRate,
-				channels     : 1,
 				parameters   : consumableCapRtxCodec.parameters,
 				rtcpFeedback : consumableCapRtxCodec.rtcpFeedback
 			};
@@ -968,8 +984,11 @@ export function getConsumerRtpParameters(
 
 	consumerParams.headerExtensions = consumableParams.headerExtensions
 		.filter((ext) => (
-			(caps.headerExtensions)
-				.some((capExt) => capExt.preferredId === ext.id)
+			caps.headerExtensions
+				.some((capExt) => (
+					capExt.preferredId === ext.id &&
+					capExt.uri === ext.uri
+				))
 		));
 
 	// Reduce codecs' RTCP feedback. Use Transport-CC if available, REMB otherwise.
@@ -1083,9 +1102,10 @@ export function getPipeConsumerRtpParameters(
 		consumerParams.codecs.push(codec);
 	}
 
-	// Reduce RTP extensions by disabling transport BWE related ones.
+	// Reduce RTP extensions by disabling transport MID and BWE related ones.
 	consumerParams.headerExtensions = consumableParams.headerExtensions
 		.filter((ext) => (
+			ext.uri !== 'urn:ietf:params:rtp-hdrext:sdes:mid' &&
 			ext.uri !== 'http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time' &&
 			ext.uri !== 'http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01'
 		));

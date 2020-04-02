@@ -7,7 +7,6 @@ import {
 	TransportTraceEventData,
 	SctpState
 } from './Transport';
-import { Consumer, ConsumerOptions } from './Consumer';
 import { SctpParameters, NumSctpStreams } from './SctpParameters';
 import { SrtpParameters, SrtpCryptoSuite } from './SrtpParameters';
 
@@ -25,17 +24,11 @@ export type PlainTransportOptions =
 
 	/**
 	 * Whether remote IP:port should be auto-detected based on first RTP/RTCP
-	 * packet received. If enabled, connect() method must not be called. This
-	 * option is ignored if multiSource is set. Default false.
+	 * packet received. If enabled, connect() method must not be called unless
+	 * SRTP is enabled. If so, it must be called with just remote SRTP parameters.
+	 * Default false.
 	 */
 	comedia?: boolean;
-
-	/**
-	 * Whether RTP/RTCP from different remote IPs:ports is allowed. If set, the
-	 * transport will just be valid for receiving media (consume() cannot be
-	 * called on it) and connect() must not be called. Default false.
-	 */
-	multiSource?: boolean;
 
 	/**
 	 * Create a SCTP association. Default false.
@@ -102,11 +95,9 @@ export type PlainTransportStat =
 	availableOutgoingBitrate?: number;
 	availableIncomingBitrate?: number;
 	maxIncomingBitrate?: number;
-
 	// PlainTransport specific.
 	rtcpMux: boolean;
 	comedia: boolean;
-	multiSource: boolean;
 	tuple: TransportTuple;
 	rtcpTuple?: TransportTuple;
 }
@@ -121,35 +112,21 @@ const logger = new Logger('PlainTransport');
 export class PlainTransport extends Transport
 {
 	// PlainTransport data.
-	// - .rtcpMux
-	// - .comedia
-	// - .multiSource
-	// - .tuple
-	//   - .localIp
-	//   - .localPort
-	//   - .remoteIp
-	//   - .remotePort
-	//   - .protocol
-	// - .rtcpTuple
-	//   - .localIp
-	//   - .localPort
-	//   - .remoteIp
-	//   - .remotePort
-	//   - .protocol
-	// - .sctpParameters
-	//   - .port
-	//   - .OS
-	//   - .MIS
-	//   - .maxMessageSize
-	// - .sctpState
-	// - .srtpParameters
-	//   - .cryptoSuite
-	//   - .keyBase64
+	protected readonly _data:
+	{
+		rtcpMux?: boolean;
+		comedia?: boolean;
+		tuple: TransportTuple;
+		rtcpTuple?: TransportTuple;
+		sctpParameters?: SctpParameters;
+		sctpState?: SctpState;
+		srtpParameters?: SrtpParameters;
+	};
 
 	/**
 	 * @private
 	 * @emits tuple - (tuple: TransportTuple)
-	 * @emits rtcpTuple - (rtcpTuple: TransportTuple)
+	 * @emits rtcptuple - (rtcpTuple: TransportTuple)
 	 * @emits sctpstatechange - (sctpState: SctpState)
 	 * @emits trace - (trace: TransportTraceEventData)
 	 */
@@ -163,6 +140,8 @@ export class PlainTransport extends Transport
 
 		this._data =
 		{
+			rtcpMux        : data.rtcpMux,
+			comedia        : data.comedia,
 			tuple          : data.tuple,
 			rtcpTuple      : data.rtcpTuple,
 			sctpParameters : data.sctpParameters,
@@ -200,7 +179,7 @@ export class PlainTransport extends Transport
 	/**
 	 * SCTP state.
 	 */
-	get sctpState(): SctpState
+	get sctpState(): SctpState | undefined
 	{
 		return this._data.sctpState;
 	}
@@ -223,7 +202,7 @@ export class PlainTransport extends Transport
 	 * @emits newdataproducer - (dataProducer: DataProducer)
 	 * @emits newdataconsumer - (dataProducer: DataProducer)
 	 * @emits tuple - (tuple: TransportTuple)
-	 * @emits rtcpTuple - (rtcpTuple: TransportTuple)
+	 * @emits rtcptuple - (rtcpTuple: TransportTuple)
 	 * @emits sctpstatechange - (sctpState: SctpState)
 	 * @emits trace - (trace: TransportTraceEventData)
 	 */
@@ -314,19 +293,6 @@ export class PlainTransport extends Transport
 		this._data.srtpParameters = data.srtpParameters;
 	}
 
-	/**
-	 * Override Transport.consume() method to reject it if multiSource is set.
-	 *
-	 * @override
-	 */
-	async consume(params: ConsumerOptions): Promise<Consumer>
-	{
-		if (this._data.multiSource)
-			throw new Error('cannot call consume() with multiSource set');
-
-		return super.consume(params);
-	}
-
 	private _handleWorkerNotifications(): void
 	{
 		this._channel.on(this._internal.transportId, (event: string, data?: any) =>
@@ -347,16 +313,16 @@ export class PlainTransport extends Transport
 					break;
 				}
 
-				case 'rtcpTuple':
+				case 'rtcptuple':
 				{
 					const rtcpTuple = data.rtcpTuple as TransportTuple;
 
 					this._data.rtcpTuple = rtcpTuple;
 
-					this.safeEmit('rtcpTuple', rtcpTuple);
+					this.safeEmit('rtcptuple', rtcpTuple);
 
 					// Emit observer event.
-					this._observer.safeEmit('rtcpTuple', rtcpTuple);
+					this._observer.safeEmit('rtcptuple', rtcpTuple);
 
 					break;
 				}

@@ -106,6 +106,18 @@ export declare type WebRtcTransportStat = {
     dtlsState: DtlsState;
 };
 export declare class WebRtcTransport extends Transport {
+    protected readonly _data: {
+        iceRole: 'controlled';
+        iceParameters: IceParameters;
+        iceCandidates: IceCandidate[];
+        iceState: IceState;
+        iceSelectedTuple: TransportTuple;
+        dtlsParameters: DtlsParameters;
+        dtlsState: DtlsState;
+        dtlsRemoteCert?: string;
+        sctpParameters?: SctpParameters;
+        sctpState?: SctpState;
+    };
     /**
      * @private
      * @emits icestatechange - (iceState: IceState)
@@ -154,7 +166,7 @@ export declare class WebRtcTransport extends Transport {
     /**
      * SCTP state.
      */
-    get sctpState(): SctpState;
+    get sctpState(): SctpState | undefined;
     /**
      * Observer.
      *
