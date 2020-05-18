@@ -195,11 +195,11 @@ RemoteBitrateEstimatorAbsSendTime::ProcessClusters(int64_t now_ms) {
           "probe successful, sent at %d bps, received at %d bps "
           "mean send delta:%fms, mean recv delta:%f ms, "
           "num probes:%d",
-          bestIt->GetSendBitrateBps(),
-          bestIt->GetRecvBitrateBps(),
-          bestIt->send_mean_ms,
-          bestIt->recv_mean_ms,
-          bestIt->count);
+          best_it->GetSendBitrateBps(),
+          best_it->GetRecvBitrateBps(),
+          best_it->send_mean_ms,
+          best_it->recv_mean_ms,
+          best_it->count);
 
       remote_rate_.SetEstimate(DataRate::bps(probe_bitrate_bps),
                                Timestamp::ms(now_ms));
@@ -247,7 +247,7 @@ void RemoteBitrateEstimatorAbsSendTime::IncomingPacketInfo(
   uint32_t timestamp = send_time_24bits << kAbsSendTimeInterArrivalUpshift;
   int64_t send_time_ms = static_cast<int64_t>(timestamp) * kTimestampToMs;
 
-  int64_t now_ms = DepLibUV::GetTimeMs();
+  int64_t now_ms = DepLibUV::GetTimeMsInt64();
   // TODO(holmer): SSRCs are only needed for REMB, should be broken out from
   // here.
 

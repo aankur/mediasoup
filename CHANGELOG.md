@@ -1,5 +1,52 @@
 # Changelog
 
+### 3.5.13
+
+* Simplify `GetDesiredBitrate()` in `SimulcastConsumer` and `SvcConsumer`.
+* Update libuv to 1.38.0.
+
+
+### 3.5.12
+
+* `SeqManager.cpp`: Improve performance.
+  - PR #398 (credits to @penguinol).
+
+
+### 3.5.11
+
+* `SeqManager.cpp`: Fix a bug and improve performance.
+  - Fixes issue #395 via PR #396 (credits to @penguinol).
+* Drop Node.js 8 support. Minimum supported Node.js version is now 10.
+* Upgrade `eslint` and `jest` major versions.
+
+
+### 3.5.10
+
+* `SimulcastConsumer.cpp`: Fix `IncreaseLayer()` method (fixes #394).
+* Udpate Node deps.
+
+
+### 3.5.9
+
+* `libwebrtc`: Apply patch by @sspanak and @Ivaka to avoid crash. Related issue: #357.
+* `PortManager.cpp`: Do not use `UV_UDP_RECVMMSG` in Windows due to a bug in libuv 1.37.0.
+* Update Node deps.
+
+
+### 3.5.8
+
+* Enable `UV_UDP_RECVMMSG`:
+  - Upgrade libuv to 1.37.0.
+  - Use `uv_udp_init_ex()` with `UV_UDP_RECVMMSG` flag.
+  - Add our own `uv.gyp` now that libuv has removed support for GYP (fixes #384).
+
+
+### 3.5.7
+
+* Fix crash in mediasoup-worker due to conversion from `uint64_t` to `int64_t` (used within `libwebrtc` code. Fixes #357.
+* Update `usrsctp` library.
+* Update Node deps.
+
 
 ### 3.5.6
 
