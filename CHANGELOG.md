@@ -1,5 +1,53 @@
 # Changelog
 
+### 3.6.5
+
+* Set `score:0` when `dtx:true` is set in an `encoding` and there is no RTP for some seconds for that RTP stream.
+  - Fixes #415.
+
+
+### 3.6.4
+
+* `gyp`: Fix CLT version detection in OSX Catalina when XCode app is not installed.
+  - PR #413 (credits to @enimo).
+
+
+### 3.6.3
+
+* Modernize TypeScript.
+
+
+### 3.6.2
+
+* Fix crash in `Transport.ts` when closing a `DataConsumer` created on a `DirectTransport`.
+
+
+### 3.6.1
+
+* Export new `DirectTransport` in `types`.
+* Make `DataProducerOptions` optional (not needed when in a `DirectTransport`).
+
+
+### 3.6.0
+
+* DataChannel termination:
+  - PR #409
+  - Allow the Node application to directly send text/binary messages to mediasoup-worker C++ process so others can consume them using `DataConsumers`.
+  - And vice-versa: allow the Node application to directly consume in Node messages send by `DataProducers`.
+* Add `WorkerLogTag` TypeScript enum and also add a new 'message' tag into it.
+
+
+### 3.5.15
+
+* Simulcast and SVC: Better computation of desired bitrate based on `maxBitrate` field in the `producer.rtpParameters.encodings`.
+
+
+### 3.5.14
+
+* Update deps, speciall `uuid` and `@types/uuid` that had a TypeScript related bug.
+* `TransportCongestionClient.cpp`: Improve sender side bandwidth estimation by do not reporting `this->initialAvailableBitrate` as available bitrate due to strange behavior in the algorithm.
+
+
 ### 3.5.13
 
 * Simplify `GetDesiredBitrate()` in `SimulcastConsumer` and `SvcConsumer`.
